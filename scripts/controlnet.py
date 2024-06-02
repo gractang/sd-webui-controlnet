@@ -6,7 +6,7 @@ from collections import OrderedDict
 from copy import copy, deepcopy
 from typing import Dict, Optional, Tuple, List
 import modules.scripts as scripts
-from modules import shared, devices, script_callbacks, processing, masking, images
+from modules import shared, devices, script_callbacks, processing, masking, images, transformation_utils
 import gradio as gr
 import time
 
@@ -45,6 +45,7 @@ from scripts.infotext import Infotext
 import cv2
 import numpy as np
 import torch
+import torchvision.transforms as transforms
 
 from PIL import Image, ImageFilter, ImageOps
 from scripts.lvminthin import lvmin_thin, nake_nms
@@ -125,6 +126,9 @@ def prepare_mask(
     Returns:
         mask (Image.Image): The prepared mask as a PIL Image object.
     """
+    # print("**********************")
+    # print("in prepare_mask")
+    # print("**********************")
     mask = mask.convert("L")
     if getattr(p, "inpainting_mask_invert", False):
         mask = ImageOps.invert(mask)
@@ -214,6 +218,7 @@ def get_control(
             # inpaint_only+lama is special and required outpaint fix
             _, input_image = Script.detectmap_proc(input_image, unit.module, resize_mode, hr_y, hr_x)
         input_images = [input_image]
+        
 
     if unit.pixel_perfect:
         unit.processor_res = external_code.pixel_perfect_resolution(
@@ -781,10 +786,12 @@ class Script(scripts.Script, metaclass=(
             input_image = [Image.fromarray(x) for x in input_image]
 
             mask = prepare_mask(a1111_mask_image, p)
+            
+            
 
             crop_region = masking.get_crop_region(np.array(mask), p.inpaint_full_res_padding)
             crop_region = masking.expand_crop_region(crop_region, p.width, p.height, mask.width, mask.height)
-
+            
             input_image = [
                 images.resize_image(resize_mode.int_value(), i, mask.width, mask.height)
                 for i in input_image
@@ -798,6 +805,14 @@ class Script(scripts.Script, metaclass=(
 
             input_image = [np.asarray(x)[:, :, 0] for x in input_image]
             input_image = np.stack(input_image, axis=2)
+            
+            mask = mask.crop(crop_region)
+            image_mask = images.resize_image(2, mask, p.width, p.height)
+            print("**************************")
+            print("In try_crop_image_with_a1111_mask")
+            print("Saving mask")
+            print("**************************")
+            image_mask.save("imgs/cropped_mask.png")
         return input_image
 
     @staticmethod
@@ -941,7 +956,30 @@ class Script(scripts.Script, metaclass=(
                 controls, hr_controls, additional_maps = get_control(
                     p, unit, idx, control_model_type, preprocessor)
                 detected_maps.extend(additional_maps)
-
+                
+                print("**************************")
+                print("EDITING CONTROL, MASK")
+                print("**************************")
+                
+                img = controls[0].squeeze(0)
+                to_pil = transforms.ToPILImage()
+                img = to_pil(img)
+                img.save("imgs/controls.png")
+                
+                c = transformation_utils.load_image("imgs/controls.png")
+                m = transformation_utils.load_image("imgs/cropped_mask.png")
+                
+                final_c, final_m = transformation_utils.get_final_contour_and_mask(c, m, "/home/grace/board-game-bot/intermediate_results/transform_params.json") # TODO cleanup / find a less hacky sol
+                cv2.imwrite("imgs/final_contour.png", final_c)
+                cv2.imwrite("imgs/final_mask.png", final_m)
+                
+                to_tensor = transforms.ToTensor()
+                new_tensor = to_tensor(Image.open("imgs/final_contour.png").convert(mode="RGB"))
+                new_tensor = new_tensor.unsqueeze(0)
+                device = controls[0].device
+                new_tensor = new_tensor.to(device)
+                controls = (new_tensor,) + controls[1:]
+                
             if len(controls) == len(hr_controls) == 1 and control_model_type not in [ControlModelType.SparseCtrl]:
                 control = controls[0]
                 hr_control = hr_controls[0]
