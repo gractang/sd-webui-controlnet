@@ -205,6 +205,10 @@ def get_control(
     if unit.is_animate_diff_batch:
         unit = add_animate_diff_batch_input(p, unit)
 
+    print("**********************")
+    print("in get_control")
+    print("**********************")
+
     high_res_fix = isinstance(p, StableDiffusionProcessingTxt2Img) and getattr(p, 'enable_hr', False)
     h, w, hr_y, hr_x = Script.get_target_dimensions(p)
     input_image, resize_mode = Script.choose_input_image(p, unit, idx)
@@ -212,6 +216,19 @@ def get_control(
         assert unit.accepts_multiple_inputs or unit.is_animate_diff_batch
         input_images = input_image
     else: # Following operations are only for single input image.
+        if p.load_contour:
+            print("**********************")
+            print("LOADING INIT IMG FOR CONTOUR")
+            print("**********************")
+            # Load initial image from p.init_img_path
+            input_image = cv2.imread(p.init_img_path)
+        else:
+            print("**********************")
+            print("NOT LOADING INIT IMG FOR CONTOUR")
+            print("**********************")
+            # Save to p.init_img_path
+            cv2.imwrite(p.init_img_path, input_image)
+            
         input_image = Script.try_crop_image_with_a1111_mask(p, unit, input_image, resize_mode)
         input_image = np.ascontiguousarray(input_image.copy()).copy() # safe numpy
         if unit.module == 'inpaint_only+lama' and resize_mode == ResizeMode.OUTER_FIT:
@@ -969,7 +986,7 @@ class Script(scripts.Script, metaclass=(
                 c = transformation_utils.load_image("imgs/controls.png")
                 m = transformation_utils.load_image("imgs/cropped_mask.png")
                 
-                final_c, final_m = transformation_utils.get_final_contour_and_mask(c, m, "/home/grace/board-game-bot/intermediate_results/transform_params.json") # TODO cleanup / find a less hacky sol
+                final_c, final_m = transformation_utils.get_final_contour_and_mask(c, m, p.transformation_params_path)
                 cv2.imwrite("imgs/final_contour.png", final_c)
                 cv2.imwrite("imgs/final_mask.png", final_m)
                 
