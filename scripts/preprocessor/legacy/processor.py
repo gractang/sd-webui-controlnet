@@ -47,31 +47,31 @@ from scipy.ndimage.interpolation import map_coordinates, zoom
 
 #     return map_coordinates(image, indices, order=1, mode='reflect').reshape(shape)
 
-def elastic_transform(image, alpha, sigma, grid_spacing=10):
-    random_state = np.random.RandomState(None)
+# def elastic_transform(image, alpha, sigma, grid_spacing=10):
+#     random_state = np.random.RandomState(None)
 
-    shape = image.shape
-    grid_shape = (shape[0] // grid_spacing, shape[1] // grid_spacing)
+#     shape = image.shape
+#     grid_shape = (shape[0] // grid_spacing, shape[1] // grid_spacing)
     
-    # Create coarse displacement fields
-    dx = gaussian_filter((random_state.rand(*grid_shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
-    dy = gaussian_filter((random_state.rand(*grid_shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
+#     # Create coarse displacement fields
+#     dx = gaussian_filter((random_state.rand(*grid_shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
+#     dy = gaussian_filter((random_state.rand(*grid_shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
 
-    # Interpolate displacement fields to full image resolution
-    dx = zoom(dx, grid_spacing, order=1)
-    dy = zoom(dy, grid_spacing, order=1)
+#     # Interpolate displacement fields to full image resolution
+#     dx = zoom(dx, grid_spacing, order=1)
+#     dy = zoom(dy, grid_spacing, order=1)
 
-    # Ensure the interpolated displacement fields match the image shape
-    if dx.shape != shape:
-        dx = cv2.resize(dx, (shape[1], shape[0]), interpolation=cv2.INTER_LINEAR)
-    if dy.shape != shape:
-        dy = cv2.resize(dy, (shape[1], shape[0]), interpolation=cv2.INTER_LINEAR)
+#     # Ensure the interpolated displacement fields match the image shape
+#     if dx.shape != shape:
+#         dx = cv2.resize(dx, (shape[1], shape[0]), interpolation=cv2.INTER_LINEAR)
+#     if dy.shape != shape:
+#         dy = cv2.resize(dy, (shape[1], shape[0]), interpolation=cv2.INTER_LINEAR)
 
-    x, y = np.meshgrid(np.arange(shape[1]), np.arange(shape[0]))
-    indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1))
+#     x, y = np.meshgrid(np.arange(shape[1]), np.arange(shape[0]))
+#     indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1))
 
-    distorted_image = map_coordinates(image, indices, order=1, mode='reflect').reshape(shape)
-    return distorted_image
+#     distorted_image = map_coordinates(image, indices, order=1, mode='reflect').reshape(shape)
+#     return distorted_image
 
 
 def torch_handler(module: str, name: str):
@@ -382,7 +382,8 @@ def pidinet(img, res=512, **kwargs):
     print("*********************")
     print("softedge pidinet?")
     print("*********************")
-    return elastic_transform(remove_pad(result), 150, 10, 3), True
+    return remove_pad(result), True
+    # return elastic_transform(remove_pad(result), 150, 10, 3), True
 
 
 def pidinet_ts(img, res=512, **kwargs):

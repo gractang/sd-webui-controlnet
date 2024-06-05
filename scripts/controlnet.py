@@ -804,10 +804,12 @@ class Script(scripts.Script, metaclass=(
 
             mask = prepare_mask(a1111_mask_image, p)
             
-            
-
             crop_region = masking.get_crop_region(np.array(mask), p.inpaint_full_res_padding)
             crop_region = masking.expand_crop_region(crop_region, p.width, p.height, mask.width, mask.height)
+            
+            # save crop_region to file
+            with open("imgs/crop_region.txt", "w") as f:
+                f.write(str(crop_region))
             
             input_image = [
                 images.resize_image(resize_mode.int_value(), i, mask.width, mask.height)
