@@ -978,6 +978,7 @@ class Script(scripts.Script, metaclass=(
                 
                 print("**************************")
                 print("EDITING CONTROL, MASK")
+                # print("Transformation Params Path: ", p.transformation_params_path)
                 print("**************************")
                 
                 img = controls[0].squeeze(0)
