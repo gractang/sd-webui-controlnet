@@ -126,9 +126,6 @@ def prepare_mask(
     Returns:
         mask (Image.Image): The prepared mask as a PIL Image object.
     """
-    # print("**********************")
-    # print("in prepare_mask")
-    # print("**********************")
     mask = mask.convert("L")
     if getattr(p, "inpainting_mask_invert", False):
         mask = ImageOps.invert(mask)
@@ -205,10 +202,6 @@ def get_control(
     if unit.is_animate_diff_batch:
         unit = add_animate_diff_batch_input(p, unit)
 
-    print("**********************")
-    print("in get_control")
-    print("**********************")
-
     high_res_fix = isinstance(p, StableDiffusionProcessingTxt2Img) and getattr(p, 'enable_hr', False)
     h, w, hr_y, hr_x = Script.get_target_dimensions(p)
     input_image, resize_mode = Script.choose_input_image(p, unit, idx)
@@ -217,15 +210,9 @@ def get_control(
         input_images = input_image
     else: # Following operations are only for single input image.
         if p.load_contour:
-            print("**********************")
-            print("LOADING INIT IMG FOR CONTOUR")
-            print("**********************")
             # Load initial image from p.init_img_path
             input_image = cv2.imread(p.init_img_path)
         else:
-            print("**********************")
-            print("NOT LOADING INIT IMG FOR CONTOUR")
-            print("**********************")
             # Save to p.init_img_path
             cv2.imwrite(p.init_img_path, input_image)
             
@@ -827,10 +814,6 @@ class Script(scripts.Script, metaclass=(
             
             mask = mask.crop(crop_region)
             image_mask = images.resize_image(2, mask, p.width, p.height)
-            print("**************************")
-            print("In try_crop_image_with_a1111_mask")
-            print("Saving mask")
-            print("**************************")
             image_mask.save("imgs/cropped_mask.png")
         return input_image
 
@@ -975,11 +958,6 @@ class Script(scripts.Script, metaclass=(
                 controls, hr_controls, additional_maps = get_control(
                     p, unit, idx, control_model_type, preprocessor)
                 detected_maps.extend(additional_maps)
-                
-                print("**************************")
-                print("EDITING CONTROL, MASK")
-                # print("Transformation Params Path: ", p.transformation_params_path)
-                print("**************************")
                 
                 img = controls[0].squeeze(0)
                 to_pil = transforms.ToPILImage()
